@@ -130,16 +130,34 @@ public class BotService {
             }
             var nearDangerousObject = getNearDangerousObject(listDangerousObject);
             if(getDistanceBetween(bot,nearDangerousObject)<71){
-
-                if((getHeadingBetween(nearDangerousObject)<=90)){
-                    playerAction.action = PlayerActions.FORWARD;
-                    playerAction.heading = (getHeadingBetween(nearDangerousObject)+100)%360;
-                    System.out.println("thos");
+                List<List<GameObject>> listDangerousObjectTwo = new ArrayList<>();
+                for(int i=0;i<listDangerousObject.size();i++){
+                    if(nearDangerousObject!=listDangerousObject.get(i).get(0)){
+                        listDangerousObjectTwo.add(listDangerousObject.get(i));
+                    }
                 }
-                if((getHeadingBetween(nearDangerousObject)>90)&&(getHeadingBetween(nearDangerousObject)<180)){
+                GameObject n2 = getNearDangerousObject(listDangerousObjectTwo);
+                if((getDistanceBetween(bot,n2)-getDistanceBetween(bot,nearDangerousObject))<10){
                     playerAction.action = PlayerActions.FORWARD;
-                    playerAction.heading = getHeadingBetween(nearDangerousObject)-80;
-                    System.out.println("this");
+
+                    if (getDistanceBetween(bot, foodList.get(foodList.size()-1)) > getDistanceBetween(bot, superFood.get(superFood.size()-1))) {
+                        playerAction.heading = getHeadingBetween(superFood.get(superFood.size()-1));
+                    } else {
+                        playerAction.heading = getHeadingBetween(foodList.get(foodList.size()-1));
+                    }
+                }
+                else {
+
+                    if ((getHeadingBetween(nearDangerousObject) <= 90)) {
+                        playerAction.action = PlayerActions.FORWARD;
+                        playerAction.heading = (getHeadingBetween(nearDangerousObject) + 90) % 360;
+                        System.out.println("thos");
+                    }
+                    if ((getHeadingBetween(nearDangerousObject) > 90) && (getHeadingBetween(nearDangerousObject) < 180)) {
+                        playerAction.action = PlayerActions.FORWARD;
+                        playerAction.heading = getHeadingBetween(nearDangerousObject) - 90;
+                        System.out.println("this");
+                    }
                 }
 
             }else {
@@ -150,18 +168,48 @@ public class BotService {
 //                    playerAction.heading = getHeadingBetween(foodList.get(0));
 //                }
                 if(enemy.get(0).size>bot.size){
-                    if(getDistanceBetween(bot,enemy.get(0))<71){
-                        if((getHeadingBetween(enemy.get(0))<=90)){
-                            playerAction.action = PlayerActions.FORWARD;
-                            playerAction.heading = (getHeadingBetween(enemy.get(0))+100)%360;
-                            System.out.println("thus");
+                    if(bot.size>1&&((getDistanceBetween(bot,enemy.get(0))-getDistanceBetween(bot,enemy.get(1)))<10)) {
+                        playerAction.action = PlayerActions.FORWARD;
+
+                        if (getDistanceBetween(bot, foodList.get(foodList.size() - 1)) > getDistanceBetween(bot, superFood.get(superFood.size() - 1))) {
+                            playerAction.heading = getHeadingBetween(superFood.get(superFood.size() - 1));
+                        } else {
+                            playerAction.heading = getHeadingBetween(foodList.get(foodList.size() - 1));
                         }
-                        if((getHeadingBetween(enemy.get(0))>90)&&(getHeadingBetween(enemy.get(0))<180)){
+                    }else{
+                        if(getDistanceBetween(bot,enemy.get(0))<71){
+                            if((getHeadingBetween(enemy.get(0))<=90)){
+                                playerAction.action = PlayerActions.FORWARD;
+                                playerAction.heading = (getHeadingBetween(enemy.get(0))+90)%360;
+                                System.out.println("thus");
+                            }
+                            if((getHeadingBetween(enemy.get(0))>90)&&(getHeadingBetween(enemy.get(0))<180)){
+                                playerAction.action = PlayerActions.FORWARD;
+                                playerAction.heading = getHeadingBetween(enemy.get(0))-90;
+                                System.out.println("thas");
+                            }
+                        }else{
                             playerAction.action = PlayerActions.FORWARD;
-                            playerAction.heading = getHeadingBetween(enemy.get(0))-80;
-                            System.out.println("thas");
+
+                            if (getDistanceBetween(bot, foodList.get(0)) > getDistanceBetween(bot, superFood.get(0))) {
+                                playerAction.heading = getHeadingBetween(superFood.get(0));
+                            } else {
+                                playerAction.heading = getHeadingBetween(foodList.get(0));
+                            }
                         }
-                    }else {
+                    }
+
+
+                }else{
+                    if (distancceOfEat(getDistanceBetween(bot,enemy.get(0)))){
+                        playerAction.action = PlayerActions.FORWARD;
+                        playerAction.heading = getHeadingBetween(enemy.get(0));
+                    }
+                    if(distanceOfShoot(getDistanceBetween(bot,enemy.get(0)))){
+                        playerAction.action = PlayerActions.FIRETORPEDOES;
+                        playerAction.heading = getHeadingBetween(enemy.get(0));
+                    }
+                    if(getDistanceBetween(bot,enemy.get(0))>=400){
                         playerAction.action = PlayerActions.FORWARD;
 
                         if (getDistanceBetween(bot, foodList.get(0)) > getDistanceBetween(bot, superFood.get(0))) {
@@ -170,16 +218,10 @@ public class BotService {
                             playerAction.heading = getHeadingBetween(foodList.get(0));
                         }
                     }
-                }else{
-                    playerAction.action = PlayerActions.FIRETORPEDOES;
-                    playerAction.heading = getHeadingBetween(enemy.get(0));
+
                 }
 
             }
-//            playerAction.action = PlayerActions.FORWARD;
-//            playerAction.heading = getHeadingBetween(nearDangerousObject);
-//            System.out.println(gameState.getWorld().currentTick);
-//            System.out.println(getDistanceBetween(bot,nearDangerousObject));
 
 
 
@@ -232,4 +274,11 @@ public class BotService {
         return ret;
     }
 
+
+    private boolean distanceOfShoot(double distance){
+        if(distance<500&&distance>250) {return true;}else {return false;}
+    }
+    private boolean distancceOfEat(double distance){
+        if(distance<=250){return true;}else {return false;}
+    }
 }
