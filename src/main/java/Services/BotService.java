@@ -11,6 +11,9 @@ public class BotService {
     private PlayerAction playerAction;
     private GameState gameState;
 
+    public boolean afterburner = false;
+    public int shieldUse = 0;
+
     public BotService() {
         this.playerAction = new PlayerAction();
         this.gameState = new GameState();
@@ -131,26 +134,25 @@ public class BotService {
                 // Jika jarak antara objek berbahaya pertama dan kedua kurang dari 10
                 if ((getDistanceBetween(bot, n2) - getDistanceBetween(bot, nearDangerousObject)) < 10) {
                     playerAction.action = PlayerActions.FORWARD;
-
-                    // Cari Makanan
-                    if (getDistanceBetween(bot, foodList.get(0)) > getDistanceBetween(bot, superFood.get(0))) {
-                        playerAction.heading = getHeadingBetween(superFood.get(0));
-                    } else {
-                        playerAction.heading = getHeadingBetween(foodList.get(0));
-                    }
+                    playerAction.heading = goToFood(foodList, superFood, bot);
                 } else {
+                    // Jika object berbahaya tersebut adalah torpedo salvo maka aktifkan pelindung
+                    if (isDangerousTorpedoSalvo(bot, nearDangerousObject) && (shieldUse == 0)) {
+                        playerAction.action = PlayerActions.ACTIVATESHIELD;
+                        shieldUse = 1;
+                    } else {
+                        playerAction.action = PlayerActions.FORWARD; // Gerak maju
+                    }
+
                     // Jika sudut objek berbahaya pertama yang paling dekat kurang dari 90 derajat
                     if ((getHeadingBetween(nearDangerousObject) <= 90)) {
-                        playerAction.action = PlayerActions.FORWARD; // Gerak maju
-                        playerAction.heading = (getHeadingBetween(nearDangerousObject) + 60) % 360; // Mengatur
-                                                                                                    // sudut
+                        playerAction.heading = (getHeadingBetween(nearDangerousObject) + 60) % 360; // Mengatur // sudut
                         System.out.println("thos");
                     }
 
                     // Jika sudut objek berbahaya pertama yang paling dekat lebih dari 90 derajat
                     if ((getHeadingBetween(nearDangerousObject) > 90)
                             && (getHeadingBetween(nearDangerousObject) < 180)) {
-                        playerAction.action = PlayerActions.FORWARD;
                         playerAction.heading = ((getHeadingBetween(nearDangerousObject) - 60) + 360) % 360;
                         System.out.println("this");
                     }
@@ -320,6 +322,29 @@ public class BotService {
             }
         }
         return ret;
+    }
+
+    private boolean isGoToSupernovaPickup(GameObject bot, List<GameObject> supernovaPickup, List<GameObject> enemy) {
+        double distance = getDistanceBetween(bot, supernovaPickup.get(0));
+        double distanceEnemy = getDistanceBetween(supernovaPickup.get(0), enemy.get(0));
+        if ((distance < distanceEnemy) && (distance < 200)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private boolean isDangerousTorpedoSalvo(GameObject bot, GameObject dangerousObject) {
+        // Cek apakah object game tersebut adalah torpedo salvo
+        if (dangerousObject.gameObjectType == ObjectTypes.TORPEDO_SALVO) {
+            // Cek apakah torpedo salvo tersebut berada di dekat bot
+            if (getDistanceBetween(bot, dangerousObject) < 5) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
     }
 
     private boolean distanceOfShoot(double distance) {
