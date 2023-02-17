@@ -19,6 +19,7 @@ public class BotService {
     public int teleporterItem = 100;
     public int teleporterCount = -1;
     public int teleporterTick = 0;
+    public int tickCount = 0;
 
     public List<GameObject> listTeleporter = new ArrayList<>();
 
@@ -103,7 +104,7 @@ public class BotService {
                     .sorted(Comparator
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
-
+            System.out.print("Tick: " + tickCount + ", ");
             System.out.print("TeleportTick: " + teleporterTick + ", TeleportCount: " + teleporterCount + ", ");
             // Memasukkkan benda-benda berbahaya ke dalam list
             List<GameObject> listDangerousObject = new ArrayList<>();
@@ -152,7 +153,7 @@ public class BotService {
                             updateItemBot();
                             this.playerAction = playerAction;
                             return;
-                        } else if ((shieldUse > 20) && (bot.getSize() >= 30) && (torpedoItem >= 10)) {
+                        } else if ((shieldUse > 20) && (bot.getSize() >= 100) && (torpedoItem >= 10)) {
                             // Jika tidak ada shield, maka bot akan menghindar dan menembak torpedo
                             // salvo tersebut
                             System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
@@ -171,33 +172,35 @@ public class BotService {
             // Jika ada musuh yang berada pada radius tembak, maka bot akan menembak musuh
             // tersebut
             if (enemy.size() > 1) {
-                // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
-                if (isEnemyInRadius(enemy.get(0), bot) && (bot.getSize() >= 30) && (torpedoItem >= 10)) {
-                    // Deteksi apakah musuh tersebut memakai shield atau tidak
+                int idxMin = 0;
+                for (int i = 0; i < enemy.size(); i++) {
+                    // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
+                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 60) && (torpedoItem >= 10)) {
+                        // Deteksi apakah musuh tersebut memakai shield atau tidak
 
-                    // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
-                    // targetkan
-                    boolean isShield = false;
-                    for (int j = 0; j < shield.size(); j++) {
-                        if (shield.get(j).getPosition().equals(enemy.get(0).getPosition())) {
-                            // Jika sama maka langsung batal tembak
-                            isShield = true;
+                        // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
+                        // targetkan
+                        boolean isShield = false;
+                        for (int j = 0; j < shield.size(); j++) {
+                            if (shield.get(j).getPosition().equals(enemy.get(i).getPosition())) {
+                                // Jika sama maka langsung batal tembak
+                                isShield = true;
+                                break;
+                            }
+                        }
+
+                        // Jika tidak ada shield, maka bot akan menembak musuh tersebut
+                        if (!isShield) {
+                            System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
+                            playerAction.action = PlayerActions.FIRETORPEDOES;
+                            playerAction.heading = getHeadingBetween(enemy.get(i));
+                            torpedoItem -= 10;
+                            updateItemBot();
+                            this.playerAction = playerAction;
+                            return;
                         }
                     }
 
-                    // Jika tidak ada shield, maka bot akan menembak musuh tersebut
-                    if (!isShield) {
-                        System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
-                        playerAction.action = PlayerActions.FIRETORPEDOES;
-                        playerAction.heading = getHeadingBetween(enemy.get(0));
-                        torpedoItem -= 10;
-                        updateItemBot();
-                        this.playerAction = playerAction;
-                        return;
-                    }
-                }
-                int idxMin = 0;
-                for (int i = 0; i < enemy.size(); i++) {
                     if (enemy.get(i).getSize() < enemy.get(idxMin).getSize()) {
                         idxMin = i;
                     }
@@ -205,7 +208,8 @@ public class BotService {
 
                 // Jika terdapat musuh yang lebih kecil dari bot, maka bot menembakkan
                 // teleporter
-                if ((bot.getSize() > enemy.get(idxMin).getSize()) && (bot.getSize() >= 40) && (teleporterItem >= 100)) {
+                if ((bot.getSize() > (enemy.get(idxMin).getSize()) * 2) && (bot.getSize() >= 200)
+                        && (teleporterItem >= 100)) {
                     System.out.println("Fire Teleport, SizeBot: " + bot.getSize());
                     playerAction.action = PlayerActions.FIRETELEPORT;
                     playerAction.heading = getHeadingBetween(enemy.get(idxMin));
@@ -251,7 +255,7 @@ public class BotService {
                     }
 
                     // Jika kita dapat menembak musuh
-                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 20) && (torpedoItem >= 10)) {
+                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 60) && (torpedoItem >= 10)) {
                         // Deteksi apakah musuh tersebut memakai shield atau tidak
 
                         // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
@@ -316,6 +320,8 @@ public class BotService {
         if (teleporterCount >= 0) {
             teleporterTick++;
         }
+
+        tickCount++;
 
     }
 
