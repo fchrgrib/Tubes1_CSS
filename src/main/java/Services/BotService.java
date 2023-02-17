@@ -17,6 +17,8 @@ public class BotService {
     public int shieldUse = 0;
     public int torpedoItem = 0;
     public int teleporterItem = 100;
+    public int teleporterCount = -1;
+    public int teleporterTick = 0;
 
     public List<GameObject> listTeleporter = new ArrayList<>();
 
@@ -102,6 +104,7 @@ public class BotService {
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
 
+            System.out.print("TeleportTick: " + teleporterTick + ", TeleportCount: " + teleporterCount + ", ");
             // Memasukkkan benda-benda berbahaya ke dalam list
             List<GameObject> listDangerousObject = new ArrayList<>();
             listDangerousObject.addAll(wormHole);
@@ -112,15 +115,6 @@ public class BotService {
 
             // Hapus semua elemen list teleporter yang berada pada luar radius world
             // Menggunakan while
-            int idx = 0;
-            while (idx < listTeleporter.size()) {
-                GameObject teleporter = listTeleporter.get(idx);
-                if (getDistanceFromCenter(teleporter) > gameState.world.radius) {
-                    listTeleporter.remove(idx);
-                } else {
-                    idx++;
-                }
-            }
 
             // Defaultnya adalah bot akan bergerak maju ke arah food atau superfood terdekat
             int heading = 0;
@@ -132,31 +126,14 @@ public class BotService {
                 playerAction.heading = heading;
             }
 
-            // Cek apakah terdapat teleporter
-            if (listTeleporter.size() > 0) {
-                // Ambil teleporter pertama yang diluncurkan
-                GameObject teleporter = listTeleporter.get(0);
-                // Jika terdapat teleporter yang jika diambil, maka bot akan memakan enemy yang
-                // berada pada sekitarnya
-                GameObject tempBot = bot;
-                tempBot.setPosition(teleporter.getPosition());
-
-                // Cek apakah terdapat enemy yang lebih kecil dari tempBot dan bot teresebut
-                // menyentuh atau berada pada radius bot
-                for (int i = 0; i < enemy.size(); i++) {
-                    if ((enemy.get(i).getSize() < tempBot.getSize())
-                            && (getDistanceBetween(tempBot, enemy.get(i)) <= 0)) {
-                        // Ambil teleporter
-                        playerAction.action = PlayerActions.TELEPORT;
-                        playerAction.heading = getHeadingBetween(teleporter);
-                        updateItemBot();
-                        // Hapus elemen teleporter ini dari list
-                        listTeleporter.remove(0);
-                        this.playerAction = playerAction;
-                        return;
-                    }
-                }
-
+            if ((teleporterTick >= teleporterCount) && (teleporterCount >= 0)) {
+                System.out.println("Teleport, Size: " + bot.getSize());
+                playerAction.action = PlayerActions.TELEPORT;
+                teleporterTick = 0;
+                teleporterCount = -1;
+                updateItemBot();
+                this.playerAction = playerAction;
+                return;
             }
 
             // Jika terdapat torpedo salvonya yang mengincar bot, maka bot akan menghindar
@@ -168,18 +145,17 @@ public class BotService {
                     // menghindar (cara mengecek apakah torpedo salvo akan mengenai adalah dengan )
                     if ((getDistanceBetween(bot, torpedoSalvo.get(i)) <= 200)
                             && (isTorpedoHeadingDangerous(bot, torpedoSalvo.get(i)))) {
-                        System.out.println(
-                                "Torpedo Salvo Detected, SizeBot: " + bot.getSize() + ", ShieldUse: " + shieldUse);
                         if ((shieldUse == 0) && (bot.getSize() > 30)) {
-                            System.out.println("Shield Activated");
+                            System.out.println("Shield Activated, botSize: " + bot.getSize());
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                             shieldUse++;
                             updateItemBot();
                             this.playerAction = playerAction;
                             return;
-                        } else if ((shieldUse > 20) && (bot.getSize() >= 20) && (torpedoItem >= 10)) {
+                        } else if ((shieldUse > 20) && (bot.getSize() >= 30) && (torpedoItem >= 10)) {
                             // Jika tidak ada shield, maka bot akan menghindar dan menembak torpedo
                             // salvo tersebut
+                            System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
                             playerAction.action = PlayerActions.FIRETORPEDOES;
                             playerAction.heading = getHeadingBetween(torpedoSalvo.get(i));
                             torpedoItem -= 10;
@@ -195,37 +171,33 @@ public class BotService {
             // Jika ada musuh yang berada pada radius tembak, maka bot akan menembak musuh
             // tersebut
             if (enemy.size() > 1) {
-                int idxMin = 0;
+                // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
+                if (isEnemyInRadius(enemy.get(0), bot) && (bot.getSize() >= 30) && (torpedoItem >= 10)) {
+                    // Deteksi apakah musuh tersebut memakai shield atau tidak
 
-                // Cari semua kemungkinan musuh
-                for (int i = 0; i < enemy.size(); i++) {
-                    // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
-                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 20) && (torpedoItem >= 10)) {
-                        // Deteksi apakah musuh tersebut memakai shield atau tidak
-
-                        // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
-                        // targetkan
-                        boolean isShield = false;
-                        for (int j = 0; j < shield.size(); j++) {
-                            if (shield.get(j).getPosition().equals(enemy.get(i).getPosition())) {
-                                // Jika sama maka langsung batal tembak
-                                isShield = true;
-                            }
-                        }
-
-                        // Jika tidak ada shield, maka bot akan menembak musuh tersebut
-                        if (!isShield) {
-                            System.out.println("Enemy Detected, SizeBot: " + bot.getSize() + ", Torpedo Item: "
-                                    + torpedoItem + ", Enemy Size: " + enemy.get(i).getSize());
-                            playerAction.action = PlayerActions.FIRETORPEDOES;
-                            playerAction.heading = getHeadingBetween(enemy.get(i));
-                            torpedoItem -= 10;
-                            updateItemBot();
-                            this.playerAction = playerAction;
-                            return;
+                    // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
+                    // targetkan
+                    boolean isShield = false;
+                    for (int j = 0; j < shield.size(); j++) {
+                        if (shield.get(j).getPosition().equals(enemy.get(0).getPosition())) {
+                            // Jika sama maka langsung batal tembak
+                            isShield = true;
                         }
                     }
 
+                    // Jika tidak ada shield, maka bot akan menembak musuh tersebut
+                    if (!isShield) {
+                        System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
+                        playerAction.action = PlayerActions.FIRETORPEDOES;
+                        playerAction.heading = getHeadingBetween(enemy.get(0));
+                        torpedoItem -= 10;
+                        updateItemBot();
+                        this.playerAction = playerAction;
+                        return;
+                    }
+                }
+                int idxMin = 0;
+                for (int i = 0; i < enemy.size(); i++) {
                     if (enemy.get(i).getSize() < enemy.get(idxMin).getSize()) {
                         idxMin = i;
                     }
@@ -233,10 +205,13 @@ public class BotService {
 
                 // Jika terdapat musuh yang lebih kecil dari bot, maka bot menembakkan
                 // teleporter
-                if ((bot.getSize() > enemy.get(idxMin).getSize()) && (bot.getSize() >= 20) && (teleporterItem >= 100)) {
+                if ((bot.getSize() > enemy.get(idxMin).getSize()) && (bot.getSize() >= 40) && (teleporterItem >= 100)) {
+                    System.out.println("Fire Teleport, SizeBot: " + bot.getSize());
                     playerAction.action = PlayerActions.FIRETELEPORT;
                     playerAction.heading = getHeadingBetween(enemy.get(idxMin));
                     teleporterItem -= 100;
+                    teleporterCount = (int) getDistanceBetween(bot, enemy.get(idxMin)) / bot.getSpeed();
+
                     updateItemBot();
                     this.playerAction = playerAction;
                     return;
@@ -248,10 +223,15 @@ public class BotService {
                         + (int) getDistanceBetween(bot, enemy.get(i)))) && (bot.getSize() > 50)) {
                     playerAction.heading = getHeadingBetween(enemy.get(i));
                     if (distancceOfEat(getDistanceBetween(bot, enemy.get(i)))) {
+                        System.out.println("StartAfterBurner, SizeBot: " + bot.getSize());
                         playerAction.action = PlayerActions.STARTAFTERBURNER;
                         afterburner = true;
+                        updateItemBot();
+                        this.playerAction = playerAction;
+                        return;
                     } else {
                         if (afterburner) {
+                            System.out.println("STOP AfterBurner, SizeBot: " + bot.getSize());
                             playerAction.action = PlayerActions.STOPAFTERBURNER;
                             afterburner = false;
                             updateItemBot();
@@ -262,6 +242,7 @@ public class BotService {
 
                 } else {
                     if (afterburner) {
+                        System.out.println("STOP AfterBurner, SizeBot: " + bot.getSize());
                         playerAction.action = PlayerActions.STOPAFTERBURNER;
                         afterburner = false;
                         updateItemBot();
@@ -285,6 +266,7 @@ public class BotService {
 
                         // Jika tidak ada shield, maka bot akan menembak musuh tersebut
                         if (!isShield) {
+                            System.out.println("Fire Torpedoes, SizeBot: " + bot.getSize());
                             playerAction.action = PlayerActions.FIRETORPEDOES;
                             playerAction.heading = getHeadingBetween(enemy.get(i));
                             torpedoItem -= 10;
@@ -299,6 +281,8 @@ public class BotService {
             }
 
         }
+
+        System.out.println("FORWARD, SizeBot: " + bot.getSize());
         updateItemBot();
         this.playerAction = playerAction;
     }
@@ -327,6 +311,10 @@ public class BotService {
 
         if (teleporterItem < 1000) {
             teleporterItem++;
+        }
+
+        if (teleporterCount >= 0) {
+            teleporterTick++;
         }
 
     }
