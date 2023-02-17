@@ -462,7 +462,7 @@ public class BotService {
 
     // Prosedur untuk menuju food atau superfood
     private int goToFood(List<GameObject> foodList, List<GameObject> superFood, GameObject bot,
-                         List<GameObject> listDangerousObject) {
+            List<GameObject> listDangerousObject) {
         // Awalnya masukkan semua isi foodList, superFood, dan supernovaPickup ke dalam
         // listFood
         List<GameObject> listFood = new ArrayList<GameObject>();
@@ -483,7 +483,7 @@ public class BotService {
 
                 if (getDistanceBetween(listFood.get(i),
                         getNearDangerousObject(listDangerousObject, listFood.get(i))) < ((double) bot
-                        .getSize() - 3) * 3) {
+                                .getSize() - 3) * 3) {
                     continue;
                 }
 
