@@ -167,12 +167,14 @@ public class BotService {
             // atau memasang shield
             if (torpedoSalvo.size() > 0) {
                 for (int i = 0; i < torpedoSalvo.size(); i++) {
-                    // Apabila jarak torpedo salvo dengan bot kurang dari 20, maka bot akan
-                    // menghindar
-                    if (getDistanceBetween(bot, torpedoSalvo.get(i)) <= 200) {
+                    // Apabila jarak torpedo salvo dengan bot kurang dari 200 dan torpedo salvo akan
+                    // mengenai, maka bot akan
+                    // menghindar (cara mengecek apakah torpedo salvo akan mengenai adalah dengan )
+                    if ((getDistanceBetween(bot, torpedoSalvo.get(i)) <= 200)
+                            && (isTorpedoHeadingDangerous(bot, torpedoSalvo.get(i)))) {
                         System.out.println(
                                 "Torpedo Salvo Detected, SizeBot: " + bot.getSize() + ", ShieldUse: " + shieldUse);
-                        if ((shieldUse == 0) && (bot.getSize() > 70)) {
+                        if ((shieldUse == 0) && (bot.getSize() > 30)) {
                             System.out.println("Shield Activated");
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                             shieldUse++;
@@ -229,7 +231,7 @@ public class BotService {
             } else if (enemy.size() == 1) {
                 int i = 0;
                 if ((((bot.getSize() - 20) > (enemy.get(i).getSize()) * 2
-                        + (int) getDistanceBetween(bot, enemy.get(i)))) && (bot.getSize() > 20)) {
+                        + (int) getDistanceBetween(bot, enemy.get(i)))) && (bot.getSize() > 50)) {
                     playerAction.heading = getHeadingBetween(enemy.get(i));
                     if (distancceOfEat(getDistanceBetween(bot, enemy.get(i)))) {
                         playerAction.action = PlayerActions.STARTAFTERBURNER;
@@ -247,6 +249,8 @@ public class BotService {
                         afterburner = false;
                     }
                 }
+            } else {
+                System.out.println("Yeah Menang");
             }
 
         }
@@ -286,6 +290,28 @@ public class BotService {
         Optional<GameObject> optionalBot = gameState.getPlayerGameObjects().stream()
                 .filter(gameObject -> gameObject.id.equals(bot.id)).findAny();
         optionalBot.ifPresent(bot -> this.bot = bot);
+    }
+
+    private boolean isTorpedoHeadingDangerous(GameObject bot, GameObject torpedoSalvo) {
+        int headingBotToTorpedo = getHeadingBetween(torpedoSalvo);
+        int headingTorpedoToBot = torpedoSalvo.currentHeading;
+        int headingPlus180 = (headingBotToTorpedo + 180) % 360;
+
+        int range1 = (headingPlus180 - 90) % 360;
+        int range2 = (headingPlus180 + 90) % 360;
+
+        if (headingPlus180 < 90) {
+            return (headingTorpedoToBot >= range1 && headingTorpedoToBot <= 360)
+                    || (headingTorpedoToBot >= 0 && headingTorpedoToBot <= range2);
+        } else if (headingPlus180 < 180) {
+            return (headingTorpedoToBot >= range1 && headingTorpedoToBot <= range2);
+        } else if (headingPlus180 < 270) {
+            return (headingTorpedoToBot >= range1 && headingTorpedoToBot <= range2);
+        } else {
+            return (headingTorpedoToBot >= range1 && headingTorpedoToBot <= 360)
+                    || (headingTorpedoToBot >= 0 && headingTorpedoToBot <= range2);
+        }
+
     }
 
     // Fungsi untuk menentukan berapa sisa dari ukuran torpedo yang tersisa
