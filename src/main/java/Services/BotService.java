@@ -114,6 +114,12 @@ public class BotService {
             listDangerousObject.addAll(torpedoSalvo);
             listDangerousObject.addAll(supernovaBomb);
 
+            for (int i = 0; i < enemy.size(); i++) {
+                if (enemy.get(i).size > bot.size) {
+                    listDangerousObject.add(enemy.get(i));
+                }
+            }
+
             // Hapus semua elemen list teleporter yang berada pada luar radius world
             // Menggunakan while
 
