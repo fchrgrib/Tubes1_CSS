@@ -188,12 +188,6 @@ public class BotService {
                             updateItemBot();
                             this.playerAction = playerAction;
                             return;
-                        } else {
-                            // Jika tidak ada shield, maka bot akan menghindar
-                            playerAction.heading = (getHeadingBetween(torpedoSalvo.get(i)) + 90) % 360;
-                            updateItemBot();
-                            this.playerAction = playerAction;
-                            return;
                         }
 
                     }
