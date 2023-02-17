@@ -43,7 +43,8 @@ public class BotService {
     // Prosedur untuk menentukan aksi bot
     public void computeNextPlayerAction(PlayerAction playerAction) {
         playerAction.action = PlayerActions.FORWARD; // Aksi maju DEFAULT
-        playerAction.heading = new Random().nextInt(360);
+        // Buat heading default berdasarkan titik tengah
+        playerAction.heading = getHeadingToCenterPoint();
 
         if (!gameState.getGameObjects().isEmpty()) {
             var foodList = gameState.getGameObjects()
@@ -100,12 +101,6 @@ public class BotService {
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
 
-            var teleporter = gameState.getGameObjects()
-                    .stream().filter(item -> (item.getGameObjectType() == ObjectTypes.TELEPORTER))
-                    .sorted(Comparator
-                            .comparing(item -> getDistanceBetween(bot, item)))
-                    .collect(Collectors.toList());
-
             var shield = gameState.getGameObjects()
                     .stream().filter(item -> (item.getGameObjectType() == ObjectTypes.SHIELD))
                     .sorted(Comparator
@@ -121,8 +116,13 @@ public class BotService {
             listDangerousObject.addAll(supernovaBomb);
 
             // Defaultnya adalah bot akan bergerak maju ke arah food atau superfood terdekat
+            int heading = 0;
             if (foodList.size() + superFood.size() + supernovaPickUp.size() > 0) {
-                playerAction.heading = goToFood(foodList, superFood, bot, supernovaPickUp, listDangerousObject);
+                heading = goToFood(foodList, superFood, bot, supernovaPickUp, listDangerousObject);
+            }
+
+            if (heading > -1) {
+                playerAction.heading = heading;
             }
 
             // // Cek apakah kita mempunyai teleporter atau tidak
@@ -169,17 +169,17 @@ public class BotService {
                 for (int i = 0; i < torpedoSalvo.size(); i++) {
                     // Apabila jarak torpedo salvo dengan bot kurang dari 20, maka bot akan
                     // menghindar
-                    if (getDistanceBetween(bot, torpedoSalvo.get(i)) <= 60) {
+                    if (getDistanceBetween(bot, torpedoSalvo.get(i)) <= 200) {
                         System.out.println(
                                 "Torpedo Salvo Detected, SizeBot: " + bot.getSize() + ", ShieldUse: " + shieldUse);
-                        if ((shieldUse == 0) && (bot.getSize() > 40)) {
+                        if ((shieldUse == 0) && (bot.getSize() > 70)) {
                             System.out.println("Shield Activated");
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                             shieldUse++;
                             updateItemBot();
                             this.playerAction = playerAction;
                             return;
-                        } else if ((shieldUse > 20) && (bot.getSize() >= 10) && (torpedoItem >= 10)) {
+                        } else if ((shieldUse > 20) && (bot.getSize() >= 20) && (torpedoItem >= 10)) {
                             // Jika tidak ada shield, maka bot akan menghindar dan menembak torpedo
                             // salvo tersebut
                             playerAction.action = PlayerActions.FIRETORPEDOES;
@@ -196,31 +196,55 @@ public class BotService {
 
             // Jika ada musuh yang berada pada radius tembak, maka bot akan menembak musuh
             // tersebut
-            if (enemy.size() > 0) {
+            if (enemy.size() > 1) {
                 // Cari semua kemungkinan musuh
                 for (int i = 0; i < enemy.size(); i++) {
                     // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
-                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 10) && (torpedoItem >= 10)) {
-                        playerAction.action = PlayerActions.FIRETORPEDOES;
-                        playerAction.heading = getHeadingBetween(enemy.get(i));
-                        torpedoItem -= 10;
-                        break;
-                    }
-                    // Jika ukuran bot lebih besar dari musuh, maka bot akan mengambil musuh
-                    // tersebut
-                    if (((bot.getSize() - 20) > (enemy.get(i).getSize()) * 2)) {
-                        playerAction.heading = getHeadingBetween(enemy.get(i));
-                        if (distancceOfEat(getDistanceBetween(bot, enemy.get(i)))) {
-                            playerAction.action = PlayerActions.STARTAFTERBURNER;
-                            afterburner = true;
-                        } else {
-                            if (afterburner) {
-                                playerAction.action = PlayerActions.STOPAFTERBURNER;
-                                afterburner = false;
-                                break;
+                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 20) && (torpedoItem >= 10)) {
+                        // Deteksi apakah musuh tersebut memakai shield atau tidak
+
+                        // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
+                        // targetkan
+                        boolean isShield = false;
+                        for (int j = 0; j < shield.size(); j++) {
+                            if (shield.get(j).getPosition().equals(enemy.get(i).getPosition())) {
+                                // Jika sama maka langsung batal tembak
+                                isShield = true;
                             }
                         }
 
+                        // Jika tidak ada shield, maka bot akan menembak musuh tersebut
+                        if (!isShield) {
+                            System.out.println("Enemy Detected, SizeBot: " + bot.getSize() + ", Torpedo Item: "
+                                    + torpedoItem + ", Enemy Size: " + enemy.get(i).getSize());
+                            playerAction.action = PlayerActions.FIRETORPEDOES;
+                            playerAction.heading = getHeadingBetween(enemy.get(i));
+                            torpedoItem -= 10;
+                            updateItemBot();
+                            this.playerAction = playerAction;
+                            return;
+                        }
+                    }
+                }
+            } else if (enemy.size() == 1) {
+                int i = 0;
+                if ((((bot.getSize() - 20) > (enemy.get(i).getSize()) * 2
+                        + (int) getDistanceBetween(bot, enemy.get(i)))) && (bot.getSize() > 20)) {
+                    playerAction.heading = getHeadingBetween(enemy.get(i));
+                    if (distancceOfEat(getDistanceBetween(bot, enemy.get(i)))) {
+                        playerAction.action = PlayerActions.STARTAFTERBURNER;
+                        afterburner = true;
+                    } else {
+                        if (afterburner) {
+                            playerAction.action = PlayerActions.STOPAFTERBURNER;
+                            afterburner = false;
+                        }
+                    }
+
+                } else {
+                    if (afterburner) {
+                        playerAction.action = PlayerActions.STOPAFTERBURNER;
+                        afterburner = false;
                     }
                 }
             }
@@ -351,8 +375,18 @@ public class BotService {
         return (direction + 360) % 360;
     }
 
+    private int getHeadingToCenterPoint() {
+        var direction = toDegrees(Math.atan2(0 - bot.getPosition().y, 0 - bot.getPosition().x));
+        return (direction + 360) % 360;
+    }
+
     private int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
+    }
+
+    // Fungsi berapa jarak antara titik pusat map ((0,0)) dengan bot
+    private double getDistanceFromCenter(GameObject bot) {
+        return Math.sqrt(Math.pow(bot.getPosition().x, 2) + Math.pow(bot.getPosition().y, 2));
     }
 
     // Prosedur untuk menuju food atau superfood
@@ -379,11 +413,18 @@ public class BotService {
 
                 if (getDistanceBetween(listFood.get(i),
                         getNearDangerousObject(listDangerousObject, listFood.get(i))) < ((double) bot
-                                .getSize() - 3) * 2) {
+                                .getSize() - 3) * 3) {
                     continue;
                 }
 
+                // Jika kita memakan isi Listfood ini kita keluar dari map, maka continue juga
+                // Memakai pengukuran jari-jari pada lingkaran pusat
+
                 // Jika food berada dekat pada radius batas map, maka cari food selanjutnya
+                if ((int) getDistanceBetween(listFood.get(i), bot) + bot.getSize()
+                        + (int) getDistanceFromCenter(bot) > gameState.world.radius) {
+                    continue;
+                }
 
                 // Jika isi dari ListFood tidak dekat dengan benda berbahaya, maka
                 // Cek apakah food tersebut adalah supernovaPickup dan jarak antara bot dan food
@@ -400,7 +441,7 @@ public class BotService {
             }
         }
 
-        return 0;
+        return -1;
     }
 
     // Fungsi untuk mendapatkan objek yang berbahaya terdekat
@@ -416,34 +457,8 @@ public class BotService {
         return ret;
     }
 
-    private boolean isGoToSupernovaPickup(GameObject bot, List<GameObject> supernovaPickup, List<GameObject> enemy) {
-        double distance = getDistanceBetween(bot, supernovaPickup.get(0));
-        double distanceEnemy = getDistanceBetween(supernovaPickup.get(0), enemy.get(0));
-        if ((distance < distanceEnemy) && (distance < 200)) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private boolean distanceOfShoot(double distance) {
-        if (distance < 600 && distance > 100) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     private boolean distancceOfEat(double distance) {
         if (distance <= 100) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private boolean distanceOfBigBigerShoot(double distance) {
-        if (distance < 1000) {
             return true;
         } else {
             return false;
