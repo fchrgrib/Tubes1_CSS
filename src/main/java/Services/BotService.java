@@ -152,7 +152,7 @@ public class BotService {
                     // menghindar (cara mengecek apakah torpedo salvo akan mengenai adalah dengan )
                     if ((getDistanceBetween(bot, torpedoSalvo.get(i)) <= 200)
                             && (isTorpedoHeadingDangerous(bot, torpedoSalvo.get(i)))) {
-                        if ((shieldUse == 0) && (bot.getSize() > 30)) {
+                        if ((shieldUse == 0) && (bot.getSize() > 100)) {
                             System.out.println("Shield Activated, botSize: " + bot.getSize());
                             playerAction.action = PlayerActions.ACTIVATESHIELD;
                             shieldUse++;
@@ -181,7 +181,7 @@ public class BotService {
                 int idxMin = 0;
                 for (int i = 0; i < enemy.size(); i++) {
                     // Jika musuh berada dalam radius tembak, maka bot akan menembak musuh tersebut
-                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 60) && (torpedoItem >= 10)) {
+                    if (isEnemyInRadius(enemy.get(i), bot) && (bot.getSize() >= 40) && (torpedoItem >= 10)) {
                         // Deteksi apakah musuh tersebut memakai shield atau tidak
 
                         // Cari di dalam list shield, apakah posisinya sama dengan musuh yang kita
