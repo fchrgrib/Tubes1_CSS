@@ -104,7 +104,7 @@ public class BotService {
                     .sorted(Comparator
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
-            System.out.print("Tick: " + tickCount + ", ");
+            System.out.print("Enemy: " + enemy.size() + ", ");
             System.out.print("TeleportTick: " + teleporterTick + ", TeleportCount: " + teleporterCount + ", ");
             // Memasukkkan benda-benda berbahaya ke dalam list
             List<GameObject> listDangerousObject = new ArrayList<>();
